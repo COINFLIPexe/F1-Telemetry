@@ -2,7 +2,7 @@ const http = require('http'), fs = require('fs'), path = require('path'), zlib =
 const WebSocket = require('ws');
 const BASE = 'livetiming.formula1.com/signalr';
 const HUB = encodeURIComponent('[{"name":"Streaming"}]');
-let carData = {}, geo = null, geoKey = '', circuit = null, circuitKey = '', state = {}, standings = {}, connected = false, cars = {}, track = [], seen = new Set();
+let circuitVer = 0, liveRain = null, prog = 0, carData = {}, geo = null, geoKey = '', circuit = null, circuitKey = '', state = {}, standings = {}, connected = false, cars = {}, track = [], seen = new Set();
 
 function merge(t, s) {
   for (const k in s) {
@@ -18,7 +18,7 @@ function ingest(topic, v) {
     try { v = JSON.parse(zlib.inflateRawSync(Buffer.from(v, 'base64')).toString()); } catch { return; }
     if (topic === 'CarData.z') {
       const e = (v.Entries || []).pop();
-      if (e) for (const n in e.Cars || {}) { const c = e.Cars[n].Channels || {}; carData[n] = { s: c[2], g: c[3], d: c[45] }; }
+      if (e) for (const n in e.Cars || {}) { const c = e.Cars[n].Channels || {}; const o = carData[n] || {}; carData[n] = { s: c[2] != null ? c[2] : o.s, g: c[3] != null ? c[3] : o.g, d: c[45] != null ? c[45] : o.d }; }
       return;
     }
     if (topic === 'Position.z') {
@@ -37,6 +37,12 @@ function ingest(topic, v) {
   merge(state[topic] = state[topic] || {}, v);
   if (topic === 'SessionInfo') { loadCircuit(); loadGeo(); }
 }
+async function loadRainNow() {
+  if (!geo) return;
+  try { const j = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${geo.lat}&longitude=${geo.lon}&current=precipitation`)).json(); liveRain = { mm: j.current.precipitation }; } catch (e) {}
+}
+setInterval(loadRainNow, 180000);
+const liveFlag = () => ({ code: { 2: 'Y', 4: 'SC', 5: 'RED', 6: 'VSC', 7: 'VSCE' }[(state.TrackStatus || {}).Status] || '', txt: '' });
 async function loadGeo() {
   const m = (state.SessionInfo || {}).Meeting || {}, k = (m.Location || '') + '|' + ((m.Country || {}).Name || '');
   if (!m.Location || geoKey === k) return;
@@ -45,7 +51,7 @@ async function loadGeo() {
     if (!q) continue;
     try {
       const j = await (await fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&name=' + encodeURIComponent(q))).json();
-      if (j.results && j.results[0]) { geo = { lat: j.results[0].latitude, lon: j.results[0].longitude }; return; }
+      if (j.results && j.results[0]) { geo = { lat: j.results[0].latitude, lon: j.results[0].longitude }; loadRainNow(); loadRainReplay(); return; }
     } catch (e) {}
   }
 }
@@ -55,7 +61,7 @@ async function loadCircuit() {
   circuitKey = key + yr;
   try {
     const j = await (await fetch(`https://api.multiviewer.app/api/v1/circuits/${key}/${yr}`, { headers: { 'User-Agent': 'f1-live' } })).json();
-    if (j.x && j.y) circuit = j.x.map((x, i) => [x, j.y[i]]);
+    if (j.x && j.y) { circuit = j.x.map((x, i) => [x, j.y[i]]); circuitVer++; }
   } catch (e) { circuitKey = ''; }
 }
 
@@ -108,11 +114,12 @@ function snapshot() {
   return { connected, hasData: rows.length > 0, session: s.Name || '', meeting: (s.Meeting || {}).Name || '',
     track: (state.TrackStatus || {}).Message || '', rows, cars: cl, standings,
     part: (state.TimingData || {}).SessionPart || 0, lap: (state.LapCount || {}).CurrentLap || 0,
-    total: (state.LapCount || {}).TotalLaps || 0, wx: state.WeatherData || {}, clock: state.ExtrapolatedClock || {}, gmt: s.GmtOffset || '', geo, status: (state.SessionStatus || {}).Status || '' };
+    total: (state.LapCount || {}).TotalLaps || 0, wx: state.WeatherData || {}, clock: state.ExtrapolatedClock || {}, gmt: s.GmtOffset || '', geo, trk: circuitVer, flag: liveFlag(), rain: liveRain, status: (state.SessionStatus || {}).Status || '' };
 }
 
 // ---------- REPLAY (OpenF1, sessioni passate) ----------
 const OF = 'https://api.openf1.org/v1';
+const iso = ms => new Date(ms).toISOString();
 let rq = Promise.resolve(), stamps = [], lastReq = 0, sessList = null;
 let R = { on: false, loading: false, err: '', playing: false, speed: 1 };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -142,27 +149,33 @@ function of1(p, qs) {
 
 async function listSessions() {
   if (sessList && Date.now() - sessList.t < 600000) return sessList.v;
-  const a = await of1('sessions', 'year=' + new Date().getFullYear());
+  let a = await of1('sessions', 'year=' + new Date().getFullYear());
+  if (!a.length) a = await of1('sessions', 'year=' + (new Date().getFullYear() - 1));
   const v = a.filter(x => Date.parse(x.date_end) < Date.now()).sort((x, y) => Date.parse(y.date_start) - Date.parse(x.date_start))
-    .map(x => ({ key: x.session_key, label: `${x.country_name} · ${x.session_name} · ${x.date_start.slice(0, 10)}` }));
+    .map(x => ({ key: x.session_key, mk: x.meeting_key, country: x.country_name, loc: x.location, name: x.session_name, date: x.date_start.slice(0, 10), ts: Date.parse(x.date_start), label: `${x.country_name} · ${x.session_name} · ${x.date_start.slice(0, 10)}` }));
   sessList = { t: Date.now(), v }; return v;
 }
 
 async function loadReplay(key) {
   R = { on: false, loading: true, err: '', playing: false, speed: 1 };
   try {
-    const [s] = await of1('sessions', 'session_key=' + key);
-    const g = p => of1(p, 'session_key=' + key);
+    prog = 0;
+    const [s] = await of1('sessions', 'session_key=' + key); prog++;
+    const g = async p => { const r = await of1(p, 'session_key=' + key); prog++; return r; };
     const drv = await g('drivers'), laps = await g('laps'), pos = await g('position'), st = await g('stints'), wx = await g('weather');
-    let iv = [], pit = [];
+    let iv = [], pit = [], rc = [];
+    try { rc = await g('race_control'); } catch (e) {}
     try { iv = await g('intervals'); } catch (e) {}
     try { pit = await g('pit'); } catch (e) {}
     const D = {}; drv.forEach(d => D[d.driver_number] = { tla: d.name_acronym, color: '#' + (d.team_colour || '888888') });
     const by = (arr, f) => { const o = {}; arr.forEach(x => (o[x.driver_number] = o[x.driver_number] || []).push(f(x))); for (const k in o) o[k].sort((a, b) => a.t - b.t); return o; };
     const P = by(pos, x => ({ t: ts(x.date), v: x.position }));
     const I = by(iv, x => ({ t: ts(x.date), g: x.gap_to_leader, i: x.interval }));
-    const PT = by(pit, x => ({ t: ts(x.date), d: (x.pit_duration || x.lane_duration || 25) * 1000 }));
+    const PT = by(pit, x => ({ t: ts(x.date), d: (x.lane_duration || x.stop_duration || x.pit_duration || 25) * 1000, lap: x.lap_number }));
     const S = by(st, x => ({ t: x.lap_start || 0, c: x.compound, a: x.tyre_age_at_start || 0 }));
+    const lapsByD = {}; laps.forEach(x => { (lapsByD[x.driver_number] = lapsByD[x.driver_number] || {})[x.lap_number] = x; });
+    laps.forEach(x => { if (!x.date_start && x.lap_number === 1) { const l2 = (lapsByD[x.driver_number] || {})[2];
+      x.date_start = l2 && l2.date_start ? (x.lap_duration ? iso(ts(l2.date_start) - x.lap_duration * 1000) : iso(ts(l2.date_start) - 100000)) : s.date_start; } });
     const L = by(laps.filter(x => x.date_start), x => { const t = ts(x.date_start);
       return { t, n: x.lap_number, end: t + (x.lap_duration || 0) * 1000, dur: x.lap_duration,
         s: [x.duration_sector_1, x.duration_sector_2, x.duration_sector_3], seg: [x.segments_sector_1, x.segments_sector_2, x.segments_sector_3], st: x.st_speed }; });
@@ -175,11 +188,12 @@ async function loadReplay(key) {
     starts.sort((a, b) => a - b);
     const parts = starts.length ? [starts[0]] : [];
     for (let i = 1; i < starts.length; i++) if (starts[i] - starts[i - 1] > 240000) parts.push(starts[i]);
+    const RC = rc.map(x => ({ t: ts(x.date), cat: x.category, msg: String(x.message || '').toUpperCase(), flag: x.flag, scope: x.scope, sector: x.sector })).sort((a, b) => a.t - b.t);
     const W = wx.map(x => Object.assign({ t: ts(x.date) }, x)).sort((a, b) => a.t - b.t);
-    R = { on: true, loading: false, err: '', playing: false, speed: 1, key, s, D, P, I, PT, S, L, W, parts, maxLap,
+    R = { on: true, loading: false, err: '', playing: false, speed: 1, key, s, D, P, I, PT, S, L, W, RC, parts, maxLap,
       race: /^(Race|Sprint)$/.test(s.session_name), t0: ts(s.date_start), t1: ts(s.date_end), t: ts(s.date_start), last: Date.now(),
       buf: { a: 0, b: 0, loc: {}, car: {}, busy: false } };
-    circuit = null; circuitKey = ''; geo = null; geoKey = '';
+    circuit = null; circuitKey = ''; geo = null; geoKey = ''; circuitVer++;
     state.SessionInfo = { Name: s.session_name, StartDate: s.date_start, GmtOffset: s.gmt_offset,
       Meeting: { Location: s.location, Country: { Name: s.country_name }, Circuit: { Key: s.circuit_key } } };
     loadCircuit(); loadGeo();
@@ -200,6 +214,33 @@ async function pull(T) {
   b.busy = false;
 }
 
+async function loadRainReplay() {
+  if (!R.on || !geo) return;
+  const d = new Date(R.t0).toISOString().slice(0, 10);
+  for (const base of ['https://archive-api.open-meteo.com/v1/archive', 'https://api.open-meteo.com/v1/forecast']) {
+    try {
+      const j = await (await fetch(`${base}?latitude=${geo.lat}&longitude=${geo.lon}&start_date=${d}&end_date=${d}&hourly=precipitation&timezone=UTC`)).json();
+      if (j.hourly && j.hourly.precipitation && j.hourly.precipitation.some(x => x != null)) { R.rain = j.hourly.precipitation; return; }
+    } catch (e) {}
+  }
+}
+function flagAt(T) {
+  let sc = '', red = false, cheq = false; const y = new Set();
+  for (const e of R.RC) {
+    if (e.t > T) break;
+    if (e.cat === 'SafetyCar') {
+      if (e.msg.includes('VIRTUAL SAFETY CAR DEPLOYED')) sc = 'VSC'; else if (e.msg.includes('VIRTUAL SAFETY CAR ENDING')) sc = 'VSCE';
+      else if (e.msg.includes('SAFETY CAR DEPLOYED')) sc = 'SC'; else if (e.msg.includes('IN THIS LAP')) sc = 'SCE';
+    } else if (e.cat === 'Flag') {
+      if (e.flag === 'RED') red = true; else if (e.flag === 'CHEQUERED') cheq = true;
+      else if ((e.flag === 'GREEN' || e.flag === 'CLEAR') && e.scope === 'Track') { red = false; sc = ''; y.clear(); }
+      else if (/YELLOW/.test(e.flag || '') && e.scope === 'Sector') y.add(e.sector);
+      else if (e.flag === 'CLEAR' && e.scope === 'Sector') y.delete(e.sector);
+    }
+  }
+  const code = cheq ? 'CHEQ' : red ? 'RED' : sc || (y.size ? 'Y' : '');
+  return { code, txt: code === 'Y' ? [...y].map(x => 'S' + x).join(', ') : '' };
+}
 function advance() {
   const now = Date.now();
   if (R.on && R.playing) { R.t = Math.min(R.t1, R.t + (now - R.last) * R.speed); if (R.t >= R.t1) R.playing = false; }
@@ -213,12 +254,12 @@ function replaySnap() {
   const rows = [], cars = []; let maxLap = 0;
   const fm = v => v == null ? '' : typeof v === 'number' ? '+' + v.toFixed(3) : String(v);
   for (const n in R.D) {
-    const d = R.D[n], P = R.P[n] || [], pi = at(P, T); if (pi < 0) continue;
+    const d = R.D[n], P = R.P[n] || []; if (!P.length) continue; const pi = Math.max(0, at(P, T));
     const L = R.L[n] || [], ci = at(L, T); let li = ci;
     while (li >= 0 && !(L[li].dur && L[li].end <= T)) li--;
     const cur = ci >= 0 ? L[ci].n : 0; maxLap = Math.max(maxLap, cur);
     const lp = li >= 0 ? L[li] : null, I = R.I[n] || [], ii = at(I, T), iv = ii >= 0 ? I[ii] : null;
-    const sg = R.S[n] || [], si = at(sg, cur || 1), sti = si >= 0 ? sg[si] : null;
+    const sg = R.S[n] || [], si = Math.max(sg.length ? 0 : -1, at(sg, cur || 1)), sti = si >= 0 ? sg[si] : null;
     const car = R.buf.car[n] || [], cj = at(car, T), c = cj >= 0 ? car[cj] : null;
     const lc = R.buf.loc[n] || [], lj = at(lc, T);
     const cl = ci >= 0 ? L[ci] : null, el = cl ? T - cl.t : 0; let acc = 0, ok = !!cl;
@@ -227,7 +268,7 @@ function replaySnap() {
     if (lj >= 0) cars.push({ tla: d.tla, color: d.color, x: lc[lj].x, y: lc[lj].y });
     rows.push({ tla: d.tla, color: d.color, pos: P[pi].v, gap: iv ? fm(iv.g) : '', int: iv ? fm(iv.i) : '',
       last: lp ? fmtLap(lp.dur) : '', best: lp && lp.best ? fmtLap(lp.best) : '', bestN: lp ? lp.best : null,
-      pit: (R.PT[n] || []).some(p => p.t <= T && T < p.t + p.d), tyre: sti ? (sti.c || '')[0] || '' : '', tl: sti ? Math.max(0, sti.a + cur - sti.t) : 0,
+      pit: (R.PT[n] || []).some(p => { const o = L.find(l => l.n === p.lap + 1); const e = Math.max(p.t + p.d, o && o.t > p.t && o.t - p.t < 90000 ? o.t + 4000 : 0); return p.t <= T && T < e; }), tyre: sti ? (sti.c || '')[0] || '' : '', tl: sti ? Math.max(0, sti.a + cur - sti.t) : 0,
       gear: c ? c.g : undefined, spd: c ? c.s : undefined, ovt: !!(c && c.d >= 10),
       secs: [0, 1, 2].map(k => ({ v: src[k] && src[k].s[k] ? src[k].s[k].toFixed(3) : '', c: 0, raw: src[k] ? src[k].s[k] : null, pb: src[k] ? src[k].pb[k] : 1e9 })),
       segs: [0, 1, 2].map(k => { const a = dn[k] ? cl.seg[k] : null; return a ? a.map(x => x | 0) : new Array(((cl && cl.seg[k]) || (lp && lp.seg[k]) || []).length).fill(0); }),
@@ -247,18 +288,26 @@ function replaySnap() {
   } else if (!R.race) rem = hms(R.t1 - T);
   const w = R.W[at(R.W, T)] || {};
   return { connected: true, hasData: rows.length > 0, session: sn, meeting: R.s.location + ' (replay)', track: '', rows, cars, standings,
-    part, lap: R.race ? Math.min(maxLap, R.maxLap) : 0, total: R.race ? R.maxLap : 0, status: '',
+    part, lap: R.race ? Math.max(1, Math.min(maxLap, R.maxLap)) : 0, total: R.race ? R.maxLap : 0, status: '',
     wx: w.air_temperature == null ? {} : { AirTemp: String(w.air_temperature), TrackTemp: String(w.track_temperature), Humidity: String(w.humidity),
       WindSpeed: String(w.wind_speed), WindDirection: String(w.wind_direction), Rainfall: String(+w.rainfall ? 1 : 0) },
-    clock: { rem }, gmt: R.s.gmt_offset || '', geo, now: T };
+    clock: { rem }, gmt: R.s.gmt_offset || '', geo, now: T, trk: circuitVer, flag: flagAt(T),
+    rain: R.rain ? { mm: R.rain[new Date(T).getUTCHours()] } : null };
 }
-const replayMeta = () => ({ on: R.on, loading: R.loading, err: R.err, playing: !!R.playing, speed: R.speed || 1, frac: R.on ? (R.t - R.t0) / (R.t1 - R.t0) : 0 });
+const replayMeta = () => ({ on: R.on, loading: R.loading, err: R.err, playing: !!R.playing, speed: R.speed || 1, prog, progTotal: 9, frac: R.on ? (R.t - R.t0) / (R.t1 - R.t0) : 0 });
 function replayCtl(p) {
   if (!R.on) return;
   advance();
   if (p.has('play')) R.playing = p.get('play') === '1';
   if (p.has('speed')) R.speed = Math.min(2, Math.max(1, +p.get('speed') || 1));
   if (p.has('pos')) R.t = R.t0 + (R.t1 - R.t0) * Math.min(1, Math.max(0, +p.get('pos')));
+  if (p.has('lap')) { const n = +p.get('lap'); let m = Infinity; for (const k in R.L) R.L[k].forEach(l => { if (l.n === n && l.t < m) m = l.t; }); if (m < Infinity) R.t = m; }
+  if (p.has('clock')) {
+    const [h, mi] = p.get('clock').split(':').map(Number), mm = /^(-?)(\d+):(\d+)/.exec(R.s.gmt_offset || '0:0');
+    const off = mm ? (mm[1] ? -1 : 1) * (mm[2] * 60 + +mm[3]) * 60000 : 0, loc = new Date(R.t0 + off);
+    let tt = Date.UTC(loc.getUTCFullYear(), loc.getUTCMonth(), loc.getUTCDate(), h, mi) - off; if (tt < R.t0 - 3600000) tt += 86400000;
+    R.t = Math.min(R.t1, Math.max(R.t0, tt));
+  }
   if (p.has('off')) R.on = false;
 }
 // ---------- fine REPLAY ----------

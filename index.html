@@ -22,7 +22,7 @@ h2{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#a99cc9;mar
 .mu{color:#a99cc9;text-align:right}.sc{display:flex;gap:3px}.sc i{flex:1;height:8px;border-radius:2px;background:#3a2d58}
 .sp{background:#b84dff!important}.sg{background:#2ee66b!important}.sy{background:#ffd93b!important}
 .tw{display:grid;gap:0 12px}@media(min-width:900px){.tw{grid-auto-flow:column;grid-template-rows:repeat(11,auto)}}
-.tr{display:grid;grid-template-columns:26px 40px 44px 34px 44px 62px 62px 1fr;gap:6px;align-items:center;padding:4px 6px;border-radius:4px;background:#ffffff0a;margin-bottom:2px;min-width:560px;font-variant-numeric:tabular-nums}
+.tr{display:grid;grid-template-columns:26px 40px 44px 64px 44px 62px 62px 1fr;gap:6px;align-items:center;padding:4px 6px;border-radius:4px;background:#ffffff0a;margin-bottom:2px;min-width:600px;font-variant-numeric:tabular-nums}
 .tr.out{background:#a8201a66}.tr.ret{opacity:.4;filter:grayscale(1)}
 .gp{display:flex;flex-direction:column;text-align:right}.gp b{font-weight:700}.gp em{font-style:normal;color:#a99cc9;font-size:10px}
 .sg2{display:flex;gap:5px}.sgm{display:flex;gap:1px;flex:1}.sgm i{flex:1;height:10px;border-radius:1px;background:#3a2d58}
@@ -45,15 +45,27 @@ canvas{width:100%;height:300px;display:block}
 iframe{width:100%;height:210px;border:0;border-radius:8px;display:block}
 .m{display:grid;grid-template-columns:14px 40px auto;gap:6px;align-items:center;justify-content:start;padding:4px 8px;margin-bottom:3px;border-radius:6px;border-left:3px solid var(--c);background:linear-gradient(90deg,color-mix(in srgb,var(--c) 30%,transparent) var(--w),#ffffff0a var(--w))}
 .mi{color:#a99cc9;text-align:right;font-size:10px}.mt{letter-spacing:.03em}.mv{margin-left:6px}
-.rp{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:0 14px 10px}
-.rp select,.rp button{background:#1b1230;color:#f2eefc;border:1px solid #3a2d58;border-radius:6px;padding:5px 9px;font:inherit}
-.rp input{flex:1;min-width:120px}#rmsg{color:#a99cc9;font-size:11px}.ovt{color:#37e07a}
+.rp{display:flex;flex-direction:column;gap:8px;padding:0 14px 10px}.rc{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.rp button,.rp input{background:#1b1230;color:#f2eefc;border:1px solid #3a2d58;border-radius:8px;padding:6px 11px;font:inherit;transition:background .15s,transform .1s}
+.rp button{cursor:pointer}.rp button:active,.rp button.pr{background:#6d3df2;transform:scale(.94)}
+.rp button.on{background:#1f8f4a;border-color:#37e07a}.rp button:disabled{opacity:.7}.rp input[type=number]{width:72px}.rp input[type=range]{flex:1;min-width:140px;padding:0}
+.gps{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}.gp2{flex:0 0 auto;background:#1b1230;border:1px solid #3a2d58;border-radius:10px;padding:6px 11px;cursor:pointer}
+.gp2 b{display:block;font-size:12px}.gp2 small{color:#a99cc9;font-size:10px}.gp2.sel{background:#3b1d86;border-color:#9b6bff}
+.ses{display:flex;gap:6px;flex-wrap:wrap}.ses button.sel{background:#3b1d86;border-color:#9b6bff}
+.sgm.old{opacity:.4}.g1{display:flex;align-items:flex-end;gap:3px}.g1 b{font-size:12px}.gr{display:flex;gap:1px;align-items:flex-end;height:13px}.gr i{width:2px;background:#3a2d58}.gr i.on{background:#9b6bff}
+.flag{margin:0 14px 10px;padding:8px 12px;border-radius:8px;font-weight:800;letter-spacing:.06em;display:none}.flag.on{display:block}
+.fY,.fVSC{background:#ffd93b;color:#111}.fSC{background:#ff9f1c;color:#111}.fRED{background:#e10600}.fCHEQ{background:#fff;color:#111}
 .note{padding:0 14px 14px;color:#9b90b8;font-size:11px;max-width:1500px;margin:auto}
 .full{grid-column:1/-1}
 </style></head><body>
 <header><div>🏁 F1 Live<small id="info"></small></div><div><span class="ph" id="ph"></span><span class="live off" id="st">DEMO</span></div></header>
 <div class="pg" id="pg"><span id="lap"></span><div class="pgb"><i id="pgi"></i></div></div>
-<div class="rp" id="rp" style="display:none"><select id="rs"></select><button id="rl">Carica replay</button><button id="rpp">▶</button><button id="rsp">1x</button><input type="range" id="rr" min="0" max="1000" value="0"><button id="rx">Live</button><span id="rmsg"></span></div>
+<div class="rp" id="rp" style="display:none">
+ <div class="gps" id="gps"></div><div class="ses" id="ses"></div>
+ <div class="rc"><button id="rl">Carica replay</button><button id="rpp">▶</button><button id="rsp">1x</button><input type="range" id="rr" min="0" max="1000" value="0"><button id="rx">Live</button></div>
+ <div class="rc"><input id="rg" type="number" min="1" placeholder="Giro"><button id="rgo">Vai al giro</button><input id="rt" type="time"><button id="rto">Vai all'ora</button><span id="rmsg"></span></div>
+</div>
+<div class="flag" id="flag"></div>
 <div class="strip" id="strip"></div>
 <div class="wrap">
  <div class="card full"><h2>Timing</h2><div id="tower" class="tw"></div></div>
@@ -83,18 +95,22 @@ function demoState(){
  const rows=order.map((c,i)=>{const d=info[c];const sc=[0,1,2].map(k=>({v:(27+k*6+Math.random()*1.5).toFixed(3),c:Math.random()<.1?2:Math.random()<.4?1:0}));
   return{tla:c,color:T[d[2]][1],pos:i+1,gap:i?"+"+(i*1.4).toFixed(3):"",int:i?"+"+(1.1+i%3*.3).toFixed(3):"",last:"1:34."+(100+i*13%800),best:"1:33."+(400+i*21%500),pit:(i*7+Math.floor(t/4))%23===0,tyre:ty[i%ty.length],secs:sc,segs:[7,8,7].map(n=>Array.from({length:n},()=>[2048,2049,2049,2051][Math.random()*4|0])),ret:!qm&&i===19,tl:i*3%25+2,gear:i%7+2,spd:120+i*9,st:290+(i*7%13)+Math.random()*4|0};});
  const cars=order.map((c,i)=>{const u=(t*0.02-i*0.012+1)%1,a=u*6.283;return{tla:c,color:T[info[c][2]][1],x:Math.cos(a)*5000+Math.cos(a*3)*700,y:Math.sin(a)*3000+Math.sin(a*2)*500}});
- return{hasData:true,session:qm?"Qualifying":"Race",meeting:"Demo",track:"",part:qm?1:0,gmt:"08:00:00",geo:{lat:1.2914,lon:103.8644},wx:{AirTemp:"29.4",TrackTemp:"36.2",Humidity:"78",WindSpeed:"2.1",WindDirection:"210",Rainfall:"0"},clock:{rem:"00:"+String((1080-Math.floor(t%1080))/60|0).padStart(2,"0")+":"+String((1080-Math.floor(t%1080))%60).padStart(2,"0")},lap:1+Math.floor(t/8)%62,total:62,status:"Started",rows,cars,standings:SAMPLE};
+ return{hasData:true,session:qm?"Qualifying":"Race",meeting:"Demo",track:"",part:qm?1:0,gmt:"08:00:00",geo:{lat:1.2914,lon:103.8644},wx:{AirTemp:"29.4",TrackTemp:"36.2",Humidity:"78",WindSpeed:"2.1",WindDirection:"210",Rainfall:"0"},clock:{rem:"00:"+String((1080-Math.floor(t%1080))/60|0).padStart(2,"0")+":"+String((1080-Math.floor(t%1080))%60).padStart(2,"0")},lap:1+Math.floor(t/8)%62,total:62,status:"Started",flag:{code:["","","Y","","VSC","",""][Math.floor(t/10)%7],txt:""},rain:{mm:[0,0.4,3.1,9][Math.floor(t/10)%4]},rows,cars,standings:SAMPLE};
 }
 
 function phase(j){const n=j.session||"",p=j.part||"";
  if(n==="Sprint Qualifying"||n==="Sprint Shootout")return"SQ"+p;
  if(n==="Qualifying")return"Q"+p;if(n==="Sprint")return"SR";if(n==="Race")return"R";
  const m=n.match(/Practice (\d)/);return m?"FP"+m[1]:n}
+const HELD={},HG={};let sig="";
+function segs(r){return [0,1,2].map(k=>{const a=(r.segs&&r.segs[k])||[],key=r.tla+k,on=a.some(v=>v);if(on)HELD[key]=a;const h=on?a:(HELD[key]||a);return `<span class="sgm${on||!HELD[key]?"":" old"}">${h.map(v=>`<i class="${SC[v]||""}"></i>`).join("")}</span>`}).join("")}
+function gearHtml(r){const h=HG[r.tla]=Object.assign(HG[r.tla]||{},r.gear!=null?{g:r.gear}:{},r.spd?{s:r.spd}:{});if(h.g==null)return"<em>–</em>";
+ return `<span class="g1"><b>${h.g===0?"N":h.g}</b><span class="gr">${Array.from({length:8},(_,i)=>`<i class="${i<h.g?"on":""}" style="height:${5+i*1.2}px"></i>`).join("")}</span></span><em>${h.s||""}</em>`}
 function bar(code,color,p,right,sub,ar){return `<div class="row"><span class="p">${p}</span><span class="ar ${ar>0?"up":ar<0?"dn":""}">${ar>0?"▲":ar<0?"▼":""}</span><span class="bar" style="background:${color}"></span><span class="n">${code}<small>${sub||""}</small></span>${right}</div>`}
 function render(j){
  const sess=j.session,pts=PTS[sess]||[],B=j.standings||{};
  const q=/Qualifying|Shootout/.test(j.session),pt=j.part||0;const cls=(r,i)=>r.ret?"ret":q&&pt>0?((pt===1&&i>=16)||(pt===2&&i>=10&&i<16)?"out":(pt===2&&i>=16)||(pt===3&&i>=10)?"ret":""):"";
- $("tower").innerHTML=j.rows.map((r,i)=>`<div class="tr ${cls(r,i)}"><span class="pos" style="background:${r.color}">${i+1}</span><span class="tla">${r.tla}</span><span class="tyc"><span class="ty ${r.tyre}">${r.tyre}</span><small>${r.tl||""}</small></span><span class="car"><b>${r.gear==null?"":(r.gear===0?"N":r.gear)}</b><em>${r.spd||""}</em></span><span class="pit ${r.pit?"on":r.ovt?"ov":""}">${r.pit?"PIT":r.ovt?"OVT":""}</span><span class="gp"><b>${i?r.int:"Leader"}</b><em>${i?r.gap:""}</em></span><span class="gp"><b>${r.last}</b><em>${r.best}</em></span><span class="sg2">${(r.segs||[]).map(g=>`<span class="sgm">${g.map(v=>`<i class="${SC[v]||""}"></i>`).join("")}</span>`).join("")}</span></div>`).join("");
+ $("tower").innerHTML=j.rows.map((r,i)=>`<div class="tr ${cls(r,i)}"><span class="pos" style="background:${r.color}">${i+1}</span><span class="tla">${r.tla}</span><span class="tyc"><span class="ty ${r.tyre}">${r.tyre}</span><small>${r.tl||""}</small></span><span class="car">${gearHtml(r)}</span><span class="pit ${r.pit?"on":r.ovt?"ov":""}">${r.pit?"PIT":r.ovt?"OVT":""}</span><span class="gp"><b>${i?r.int:"Leader"}</b><em>${i?r.gap:""}</em></span><span class="gp"><b>${r.last}</b><em>${r.best}</em></span><span class="sg2">${segs(r)}</span></div>`).join("");
  const gain={};D.forEach(d=>gain[d[0]]=0);j.rows.forEach((r,i)=>gain[r.tla]=pts[i]||0);
  const L=D.map(d=>({c:d[0],g:gain[d[0]],t:(B[d[0]]||0)+gain[d[0]]})).sort((a,b)=>b.t-a.t).slice(0,10);
  const bd=Object.fromEntries(D.map(d=>d[0]).sort((a,b)=>(B[b]||0)-(B[a]||0)).map((c,i)=>[c,i]));
@@ -120,18 +136,23 @@ function drawMap(cars){
 }
 let LAST=null,radKey="";
 function hms(ms){ms=Math.max(0,ms/1000|0);const h=ms/3600|0,m=ms%3600/60|0,sc=ms%60;return(h?h+":":"")+String(m).padStart(2,"0")+":"+String(sc).padStart(2,"0")}
+function rainTxt(j,w){const mm=j.rain&&j.rain.mm!=null?+j.rain.mm:null,wet=w.Rainfall==="1";
+ if(mm==null)return wet?"In corso":"Asciutto";
+ const l=mm<0.1?(wet?"Leggera":"Asciutto"):mm<2.5?"Leggera":mm<7.6?"Moderata":"Forte";return mm.toFixed(1)+" mm/h · "+l}
+const FT={Y:"BANDIERA GIALLA",SC:"SAFETY CAR",SCE:"SAFETY CAR IN RIENTRO",VSC:"VIRTUAL SAFETY CAR",VSCE:"VSC IN CHIUSURA",RED:"BANDIERA ROSSA · SESSIONE SOSPESA",CHEQ:"BANDIERA A SCACCHI"};
+function fl(j){const f=j.flag||{},c=f.code||"",e=$("flag");e.className="flag"+(c?" on f"+(c==="SCE"?"SC":c==="VSCE"?"VSC":c):"");e.textContent=c?FT[c]+(f.txt?" · "+f.txt:""):""}
 function strip(j){if(!j||!j.hasData){$("strip").innerHTML="";return}
  const w=j.wx||{},c=j.clock||{},q=!["Race","Sprint"].includes(j.session),ch=[];
  const m=/^(-?)(\d+):(\d+)/.exec(j.gmt||"");if(m)ch.push(["Track time",new Date((j.now||Date.now())+(m[1]?-1:1)*(m[2]*60+ +m[3])*60000).toISOString().slice(11,19)]);
  if(q&&c.rem){const p=c.rem.split(":").map(Number);let ms=((p[0]*60+p[1])*60+p[2])*1000;if(c.ext&&c.utc)ms-=Date.now()-Date.parse(c.utc);ch.push(["Tempo rimanente",hms(ms)])}
- if(w.AirTemp!=null)ch.push(["Aria",w.AirTemp+"°C"],["Pista",w.TrackTemp+"°C"],["Umidità",w.Humidity+"%"],["Vento",`<span class="wd" style="transform:rotate(${(+w.WindDirection||0)+180}deg)">↑</span> ${w.WindSpeed} m/s`],["Pioggia",w.Rainfall==="1"?"Sì":"No"]);
+ if(w.AirTemp!=null)ch.push(["Aria",w.AirTemp+"°C"],["Pista",w.TrackTemp+"°C"],["Umidità",w.Humidity+"%"],["Vento",`<span class="wd" style="transform:rotate(${(+w.WindDirection||0)+180}deg)">↑</span> ${w.WindSpeed} m/s`],["Pioggia",rainTxt(j,w)]);
  $("strip").innerHTML=ch.map(x=>`<span class="chip"><em>${x[0]}</em><b>${x[1]}</b></span>`).join("");
  if(j.geo){const k=j.geo.lat+","+j.geo.lon;if(k!==radKey){radKey=k;$("rad").src=`https://embed.windy.com/embed.html?type=map&location=coordinates&zoom=8&overlay=radar&product=radar&level=surface&lat=${j.geo.lat}&lon=${j.geo.lon}&detailLat=${j.geo.lat}&detailLon=${j.geo.lon}&marker=true&metricTemp=%C2%B0C&metricWind=m%2Fs`}}}
-let tk=0;
+let tk=0,trkV;
 async function poll(){
  let j;
  try{const r=await fetch("/state");j=await r.json();demo=false;
-  if(!tk++%5||!TR.length){const t=await (await fetch("/track")).json();if(t.pts&&t.pts.length){TR=t.pts;LINE=t.line}}}
+  if(j.trk!==trkV||tk++%10===0||!TR.length){const ch=j.trk!==trkV;trkV=j.trk;const t=await (await fetch("/track")).json();if(ch||(t.pts&&t.pts.length)){TR=t.pts||[];LINE=!!t.line}}}
  catch(e){demo=true;j=demoState();}
  $("st").textContent=demo?"DEMO":(j.hasData?"LIVE":"OFF");$("st").className="live"+(demo||!j.hasData?" off":"");
  const race=["Race","Sprint"].includes(j.session);
@@ -141,21 +162,32 @@ async function poll(){
  const stt={Aborted:" · SOSPESA",Finished:" · TERMINATA",Finalised:" · TERMINATA",Ends:" · TERMINATA"}[j.status]||"";
  $("info").textContent=j.hasData?(j.meeting+" · "+j.session+(j.track?" · "+j.track:"")+stt):"";
  $("msg").textContent=demo?"Modalità demo con dati simulati: collegando il server vedrai i dati reali.":(j.hasData?(["Race","Sprint"].includes(j.session)?"":"I punti si proiettano solo in Gara e Sprint."):"In attesa di una sessione F1 live (il feed è attivo solo durante le sessioni).");
- if(j.hasData)render(j);LAST=j;strip(j);rp(j);
+ if(j.meeting+j.session!==sig){sig=j.meeting+j.session;for(const k in HELD)delete HELD[k];for(const k in HG)delete HG[k]}
+ if(j.hasData)render(j);LAST=j;strip(j);fl(j);rp(j);
 }
-let drag=false;
+let drag=false,SL=[],selM=null,selK=null;
+const SN={"Practice 1":"FP1","Practice 2":"FP2","Practice 3":"FP3","Sprint Qualifying":"SQ","Sprint Shootout":"SQ","Sprint":"Sprint","Qualifying":"Quali","Race":"Gara"};
 const ctl=q=>fetch("/replay/ctl?"+q).catch(()=>{});
+const act=(b,fn)=>{b.classList.add("pr");setTimeout(()=>b.classList.remove("pr"),350);fn();setTimeout(poll,200)};
+function drawSel(){const seen={},gp=[];SL.forEach(x=>{if(!seen[x.mk]){seen[x.mk]=1;gp.push(x)}});
+ $("gps").innerHTML=gp.map(x=>`<div class="gp2${x.mk===selM?" sel":""}" data-m="${x.mk}"><b>${x.country}</b><small>${x.loc} · ${x.date.slice(5)}</small></div>`).join("");
+ $("ses").innerHTML=SL.filter(x=>x.mk===selM).sort((a,b)=>a.ts-b.ts).map(x=>`<button class="${x.key===selK?"sel":""}" data-k="${x.key}">${SN[x.name]||x.name}</button>`).join("")}
 function rp(j){const m=j.replay;if(!m)return;
- $("rmsg").textContent=m.loading?"Carico la sessione (qualche decina di secondi)…":m.err?"Errore: "+m.err:m.on?"Replay in corso (max 2x)":"";
- $("rpp").textContent=m.playing?"⏸":"▶";$("rsp").textContent=m.speed+"x";if(!drag)$("rr").value=Math.round(m.frac*1000);
- if(m.on){$("st").textContent="REPLAY";$("st").className="live"}}
-(async()=>{try{const l=await (await fetch("/replay/sessions")).json();if(!Array.isArray(l)||!l.length)return;
- $("rs").innerHTML=l.map(x=>`<option value="${x.key}">${x.label}</option>`).join("");$("rp").style.display="flex";
- $("rl").onclick=()=>fetch("/replay/load?key="+$("rs").value);
- $("rpp").onclick=()=>ctl("play="+($("rpp").textContent==="▶"?1:0));
- $("rsp").onclick=()=>ctl("speed="+($("rsp").textContent==="1x"?2:1));
- $("rx").onclick=()=>ctl("off=1");
- $("rr").oninput=()=>{drag=true};$("rr").onchange=async()=>{await ctl("pos="+$("rr").value/1000);drag=false};
+ $("rmsg").textContent=m.loading?"Carico la sessione…":m.err?"Errore: "+m.err:m.on?"Replay (max 2x)":"";
+ $("rl").disabled=m.loading;$("rl").textContent=m.loading?"Carico "+m.prog+"/"+m.progTotal+"…":"Carica replay";$("rl").classList.toggle("on",m.loading);
+ $("rpp").textContent=m.playing?"⏸":"▶";$("rpp").classList.toggle("on",m.playing);$("rsp").textContent=m.speed+"x";$("rsp").classList.toggle("on",m.speed>1);
+ if(!drag)$("rr").value=Math.round(m.frac*1000);if(m.on){$("st").textContent="REPLAY";$("st").className="live"}}
+(async()=>{try{const l=await (await fetch("/replay/sessions")).json();if(!Array.isArray(l)||!l.length)return;SL=l;
+ selM=l[0].mk;const r=l.filter(x=>x.mk===selM&&x.name==="Race")[0]||l.filter(x=>x.mk===selM)[0];selK=r.key;drawSel();$("rp").style.display="flex";
+ $("gps").onclick=e=>{const d=e.target.closest(".gp2");if(!d)return;selM=+d.dataset.m;const f=SL.filter(x=>x.mk===selM);selK=(f.filter(x=>x.name==="Race")[0]||f[f.length-1]).key;drawSel()};
+ $("ses").onclick=e=>{const b=e.target.closest("button");if(!b)return;selK=+b.dataset.k;drawSel()};
+ $("rl").onclick=function(){act(this,()=>{this.textContent="Carico…";this.classList.add("on");fetch("/replay/load?key="+selK)})};
+ $("rpp").onclick=function(){act(this,()=>{const on=this.textContent==="▶";this.textContent=on?"⏸":"▶";this.classList.toggle("on",on);ctl("play="+(on?1:0))})};
+ $("rsp").onclick=function(){act(this,()=>{const f=this.textContent==="1x";this.textContent=f?"2x":"1x";this.classList.toggle("on",f);ctl("speed="+(f?2:1))})};
+ $("rx").onclick=function(){act(this,()=>ctl("off=1"))};
+ $("rgo").onclick=function(){if($("rg").value)act(this,()=>ctl("lap="+$("rg").value))};
+ $("rto").onclick=function(){if($("rt").value)act(this,()=>ctl("clock="+$("rt").value))};
+ $("rr").oninput=()=>{drag=true};$("rr").onchange=async()=>{await ctl("pos="+$("rr").value/1000);drag=false;poll()};
 }catch(e){}})();
-poll();setInterval(poll,2000);setInterval(()=>strip(LAST),1000);
+poll();setInterval(poll,1000);setInterval(()=>strip(LAST),1000);
 </script></body></html>
